@@ -1,4 +1,5 @@
 import { Facebook, Instagram, Phone, MessageCircle, MapPin, Clock } from "lucide-react";
+import Image from "next/image"; // Import Image component
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -81,17 +82,48 @@ export default function Footer() {
               <h4 className="font-bold text-gray-800 mb-4">Formas de Pagamento</h4>
               <div className="space-y-4">
                 <div className="grid grid-cols-4 gap-2">
-                  <img src="https://ext.same-assets.com/1148377775/629563960.png" alt="Visa" className="h-8" />
-                  <img src="https://ext.same-assets.com/1148377775/3832675979.png" alt="Mastercard" className="h-8" />
-                  <img src="https://ext.same-assets.com/1148377775/1555632808.png" alt="Elo" className="h-8" />
-                  <img src="https://ext.same-assets.com/1148377775/1584880037.png" alt="PIX" className="h-8" />
+                  <div className="relative h-8">
+                    <Image
+                      src="https://ext.same-assets.com/1148377775/629563960.png"
+                      alt="Visa"
+                      layout="fill"
+                      objectFit="contain"
+                    />
+                  </div>
+                  <div className="relative h-8">
+                    <Image
+                      src="https://ext.same-assets.com/1148377775/3832675979.png"
+                      alt="Mastercard"
+                      layout="fill"
+                      objectFit="contain"
+                    />
+                  </div>
+                  <div className="relative h-8">
+                    <Image
+                      src="https://ext.same-assets.com/1148377775/1555632808.png"
+                      alt="Elo"
+                      layout="fill"
+                      objectFit="contain"
+                    />
+                  </div>
+                  <div className="relative h-8">
+                    <Image
+                      src="https://ext.same-assets.com/1148377775/1584880037.png"
+                      alt="PIX"
+                      layout="fill"
+                      objectFit="contain"
+                    />
+                  </div>
                 </div>
                 <div className="mt-4">
-                  <img
-                    src="https://ext.same-assets.com/1148377775/1559868665.png"
-                    alt="Site Seguro"
-                    className="h-12"
-                  />
+                  <div className="relative h-12">
+                    <Image
+                      src="https://ext.same-assets.com/1148377775/1559868665.png"
+                      alt="Site Seguro"
+                      layout="fill"
+                      objectFit="contain"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -115,7 +147,7 @@ export default function Footer() {
       <div className="bg-gray-200 py-4">
         <div className="container mx-auto px-4">
           <div className="text-center text-sm text-gray-600">
-            <p>&copy; 2025 Flor de Lima. Todos os direitos reservados.</p>
+            <p>© 2025 Flor de Lima. Todos os direitos reservados.</p>
             <p className="mt-1">Floricultura SP - Floricultura São Paulo</p>
           </div>
         </div>

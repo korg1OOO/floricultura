@@ -1,6 +1,7 @@
-"use client"; // Add this since we're using useRouter
+"use client";
 
 import { useRouter } from "next/navigation";
+import Image from "next/image"; // Import Image component
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -24,7 +25,7 @@ const categories = [
     name: "Buquês",
     image: "https://ext.same-assets.com/1148377775/2369351418.png",
     description: "Buquês especiais para momentos únicos",
-    link: "/buques-e-flores", // Updated to match the navigation link in Header
+    link: "/buques-e-flores",
   },
 ];
 
@@ -42,11 +43,15 @@ export default function CategoryShowcase() {
             >
               <CardContent className="p-0">
                 <div className="relative overflow-hidden">
-                  <img
-                    src={category.image}
-                    alt={category.name}
-                    className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
+                  <div className="relative w-full h-64">
+                    <Image
+                      src={category.image}
+                      alt={category.name}
+                      layout="fill"
+                      objectFit="cover"
+                      className="group-hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                   <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
                     <h3 className="text-2xl font-bold mb-2 drop-shadow-lg">

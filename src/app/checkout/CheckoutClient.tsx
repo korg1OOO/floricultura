@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "react-hot-toast";
+import Image from "next/image"; // Import Image component
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import WhatsAppFloat from "@/components/WhatsAppFloat";
@@ -257,11 +258,15 @@ export default function CheckoutClient() {
                     key={product.id}
                     className="flex items-center bg-gray-50 p-4 rounded-lg mb-4 shadow-sm"
                   >
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="w-20 h-20 object-cover rounded-lg mr-4"
-                    />
+                    <div className="relative w-20 h-20 mr-4">
+                      <Image
+                        src={product.image}
+                        alt={product.name}
+                        layout="fill"
+                        objectFit="cover"
+                        className="rounded-lg"
+                      />
+                    </div>
                     <div className="flex-1">
                       <h3 className="text-lg font-semibold text-gray-800">
                         {product.name}
@@ -285,7 +290,7 @@ export default function CheckoutClient() {
                         <button
                           onClick={() => handleUpdateQuantity(product.id, product.quantity + 1)}
                           className="text-gray-600 hover:text-gray-800 ml-2"
-                        >
+                          >
                           +
                         </button>
                       </div>

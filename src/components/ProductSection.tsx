@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { MessageCircle, Heart } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image"; // Import Image component
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/context/AuthContext";
 
@@ -124,44 +125,44 @@ export default function ProductSection({ title, products }: ProductSectionProps)
   };
 
   const toggleFavorite = async (productId: number, productName: string) => {
-  if (!isAuthenticated) {
-    toast.error("Por favor, faça login para adicionar aos favoritos.");
-    router.push("/login");
-    return;
-  }
-  const action = favorites.includes(productId) ? "remove" : "add";
-  try {
-    console.log("Sending POST /api/favorites with token cookie");
-    const response = await fetch("/api/favorites", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ productId, action }),
-      credentials: "include",
-    });
-
-    const data = await response.json();
-    console.log("Response from POST /api/favorites:", { status: response.status, data });
-    if (response.ok) {
-      setFavorites(data);
-      if (action === "remove") {
-        toast(`${productName} foi removido dos seus favoritos.`, {
-          duration: 3000,
-        });
-      } else {
-        toast.success(`${productName} foi adicionado aos seus favoritos!`, {
-          duration: 3000,
-        });
-      }
-    } else {
-      console.error("Failed to update favorites:", data.error, "Status:", response.status);
-      toast.error(data.error || "Erro ao atualizar os favoritos.");
-      if (response.status === 401) {
-        toast.error("Sessão expirada. Por favor, faça login novamente.");
-        setTimeout(() => router.push("/login"), 2000); // Redirect after showing toast
-      }
+    if (!isAuthenticated) {
+      toast.error("Por favor, faça login para adicionar aos favoritos.");
+      router.push("/login");
+      return;
     }
+    const action = favorites.includes(productId) ? "remove" : "add";
+    try {
+      console.log("Sending POST /api/favorites with token cookie");
+      const response = await fetch("/api/favorites", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ productId, action }),
+        credentials: "include",
+      });
+
+      const data = await response.json();
+      console.log("Response from POST /api/favorites:", { status: response.status, data });
+      if (response.ok) {
+        setFavorites(data);
+        if (action === "remove") {
+          toast(`${productName} foi removido dos seus favoritos.`, {
+            duration: 3000,
+          });
+        } else {
+          toast.success(`${productName} foi adicionado aos seus favoritos!`, {
+            duration: 3000,
+          });
+        }
+      } else {
+        console.error("Failed to update favorites:", data.error, "Status:", response.status);
+        toast.error(data.error || "Erro ao atualizar os favoritos.");
+        if (response.status === 401) {
+          toast.error("Sessão expirada. Por favor, faça login novamente.");
+          setTimeout(() => router.push("/login"), 2000); // Redirect after showing toast
+        }
+      }
     } catch (error) {
       console.error("Error in toggleFavorite:", error);
       toast.error("Erro ao atualizar os favoritos.");
@@ -207,11 +208,15 @@ export default function ProductSection({ title, products }: ProductSectionProps)
                       }`}
                     />
                   </Button>
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
+                  <div className="relative w-full h-48">
+                    <Image
+                      src={product.image}
+                      alt={product.name}
+                      layout="fill"
+                      objectFit="cover"
+                      className="group-hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
                 </div>
                 <div className="p-4">
                   <h3 className="font-semibold text-gray-800 text-sm mb-1 line-clamp-2 min-h-[2.5rem]">

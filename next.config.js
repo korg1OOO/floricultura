@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    unoptimized: true,
+    unoptimized: false,  // Re-enable optimization
     domains: [
       "source.unsplash.com",
       "images.unsplash.com",

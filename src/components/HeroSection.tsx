@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image"; // Import Image component
 import { Button } from "@/components/ui/button";
 import {
   Carousel,
@@ -62,10 +63,11 @@ export default function HeroSection() {
           {slides.map((slide, index) => (
             <CarouselItem key={slide.id}>
               <div className="relative h-96 md:h-[500px] overflow-hidden">
-                <img
+                <Image
                   src={slide.image}
                   alt={slide.title}
-                  className="w-full h-full object-cover"
+                  layout="fill"
+                  objectFit="cover"
                 />
                 <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
                   <div className="text-center text-white px-4">
