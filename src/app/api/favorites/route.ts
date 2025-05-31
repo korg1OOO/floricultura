@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 import { connectToDatabase } from "@lib/mongodb";
 import Favorites from "@models/Favorites";
 
+export const dynamic = "force-dynamic";
+
 // Get the user's favorites
 export async function GET() {
   try {

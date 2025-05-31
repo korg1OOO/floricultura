@@ -6,7 +6,8 @@ import { connectToDatabase } from "@lib/mongodb";
 import Order from "@models/Order";
 import Cart from "@models/Cart";
 
-// Define the shape of the lean order object
+export const dynamic = "force-dynamic";
+
 interface LeanOrder {
   _id: mongoose.Types.ObjectId;
   userId: string;
@@ -26,6 +27,13 @@ interface LeanOrder {
 
 export async function GET() {
   try {
+    if (!process.env.MONGODB_URI) {
+      throw new Error("MONGODB_URI environment variable is not defined");
+    }
+    if (!process.env.JWT_SECRET) {
+      throw new Error("JWT_SECRET is not defined in environment variables");
+    }
+
     await connectToDatabase();
     const cookieStore = await cookies();
     const token = cookieStore.get("token")?.value;
@@ -34,13 +42,9 @@ export async function GET() {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    if (!process.env.JWT_SECRET) {
-      throw new Error("JWT_SECRET is not defined in environment variables");
-    }
     const decoded = jwt.verify(token, process.env.JWT_SECRET) as { id: string };
     const userId = decoded.id;
 
-    // Cast to unknown first, then to LeanOrder[]
     const orders = await Order.find({ userId }).sort({ createdAt: -1 }).lean() as unknown as LeanOrder[];
     return NextResponse.json(
       orders.map(order => ({ ...order, _id: order._id.toString() })),
@@ -54,6 +58,13 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    if (!process.env.MONGODB_URI) {
+      throw new Error("MONGODB_URI environment variable is not defined");
+    }
+    if (!process.env.JWT_SECRET) {
+      throw new Error("JWT_SECRET is not defined in environment variables");
+    }
+
     await connectToDatabase();
     const cookieStore = await cookies();
     const token = cookieStore.get("token")?.value;
@@ -62,9 +73,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    if (!process.env.JWT_SECRET) {
-      throw new Error("JWT_SECRET is not defined in environment variables");
-    }
     const decoded = jwt.verify(token, process.env.JWT_SECRET) as { id: string };
     const userId = decoded.id;
 

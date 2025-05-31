@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 import { connectToDatabase } from "@lib/mongodb";
 import Cart from "@models/Cart";
 
+export const dynamic = "force-dynamic";
+
 // Define interfaces for cart items
 interface CartItem {
   productId: string;

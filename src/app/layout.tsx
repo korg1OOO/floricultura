@@ -4,6 +4,8 @@ import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { Toaster } from "react-hot-toast";
 
+export const dynamic = "force-dynamic";
+
 // Load Geist and Geist Mono as local fonts from node_modules/geist/font
 const geistSans = localFont({
   src: [
