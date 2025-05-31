@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 import { connectToDatabase } from "@lib/mongodb";
 import Cart from "@models/Cart";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
   try {
     if (!process.env.MONGODB_URI) {

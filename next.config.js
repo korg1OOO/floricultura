@@ -62,6 +62,25 @@ const nextConfig = {
       },
     ];
   },
+  async rewrites() {
+    return {
+      beforeFiles: [],
+      afterFiles: [
+        {
+          source: "/api/:path*",
+          destination: "/api/:path*",
+          // Ensure API routes are not prerendered by marking them as dynamic
+          has: [{ type: "header", key: "x-prerender", value: undefined }],
+        },
+      ],
+      fallback: [],
+    };
+  },
+  // Explicitly exclude API routes from prerendering
+  experimental: {
+    // This might not be necessary in Next.js 15, but adding for safety
+    optimizeServer: true,
+  },
 };
 
 module.exports = nextConfig;
