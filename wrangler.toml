@@ -1,6 +1,6 @@
 name = "flordelima"
 compatibility_date = "2025-05-31"
+pages_build_output_dir = ".next"
 
 [build]
 command = "bun install && bun run build"
-pages_build_output_dir = ".next"
