@@ -1,7 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  trailingSlash: true,
   images: {
-    unoptimized: true,
+    unoptimized: false,
     domains: [
       "source.unsplash.com",
       "images.unsplash.com",
@@ -30,6 +34,50 @@ const nextConfig = {
         pathname: "/**",
       },
     ],
+  },
+  webpack(config) {
+    config.optimization.splitChunks = {
+      chunks: 'all',
+      maxSize: 2000000,
+      minSize: 500000,
+      cacheGroups: {
+        vendors: {
+          test: /[\\/]node_modules[\\/]/,
+          priority: -10,
+          reuseExistingChunk: true,
+        },
+        default: {
+          minChunks: 2,
+          priority: -20,
+          reuseExistingChunk: true,
+        },
+      },
+    };
+    return config;
+  },
+  async headers() {
+    return [
+      {
+        source: "/api/:path*",
+        headers: [
+          { key: "Cache-Control", value: "no-store, max-age=0" },
+          { key: "Pragma", value: "no-cache" },
+        ],
+      },
+    ];
+  },
+  async rewrites() {
+    return {
+      beforeFiles: [],
+      afterFiles: [
+        {
+          source: "/api/:path*",
+          destination: "/api/:path*",
+          has: [{ type: "header", key: "x-prerender", value: undefined }],
+        },
+      ],
+      fallback: [],
+    };
   },
 };
 
