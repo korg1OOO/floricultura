@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "baseUrl": ".", // Set baseUrl to the root directory
+    "paths": {
+      "@/*": ["./src/*"], // Existing alias for src
+      "@data/*": ["./data/*"], // Alias for /data directory
+      "@lib/*": ["./lib/*"], // Alias for /lib directory
+      "@models/*": ["./models/*"] // Alias for /models directory
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "next-env.d.ts", "build/types/**/*.ts", "types/**/*.d.ts"],
+  "exclude": [
+    "node_modules"
+  ]
+}
