@@ -3,8 +3,4 @@ compatibility_date = "2025-05-31"
 
 [build]
 command = "bun install && bun run build"
-output_dir = ".next"
-
-[[routes]]
-pattern = "/*"
-zone = "pages"
+pages_build_output_dir = ".next"
