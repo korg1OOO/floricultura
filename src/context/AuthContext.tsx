@@ -2,66 +2,60 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-}
-
 interface AuthContextType {
-  user: User | null;
+  user: { id: string; email: string } | null;
+  setUser: (user: { id: string; email: string } | null) => void;
   isAuthenticated: boolean;
   loading: boolean;
-  setUser: (user: User | null) => void;
-  refreshAuth: () => Promise<void>;
+  refreshAuth: () => Promise<void>; // Add refreshAuth
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(true);
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<{ id: string; email: string } | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const fetchUser = async () => {
+  const refreshAuth = async () => {
     try {
-      const response = await fetch("/api/auth/me", { credentials: "include" });
+      const response = await fetch("/api/auth/check", { credentials: "include" });
       const data = await response.json();
-      if (response.ok) {
+      if (response.ok && data.user) {
         setUser(data.user);
-        setIsAuthenticated(true);
       } else {
         setUser(null);
-        setIsAuthenticated(false);
       }
     } catch (error) {
-      console.error("Error fetching user:", error);
+      console.error("Error refreshing auth:", error);
       setUser(null);
-      setIsAuthenticated(false);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchUser();
+    refreshAuth();
   }, []);
 
-  const refreshAuth = async () => {
-    await fetchUser();
-  };
-
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, loading, setUser, refreshAuth }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        setUser,
+        isAuthenticated: !!user,
+        loading,
+        refreshAuth,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
-};
+}
 
-export const useAuth = () => {
+export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
-};
+}

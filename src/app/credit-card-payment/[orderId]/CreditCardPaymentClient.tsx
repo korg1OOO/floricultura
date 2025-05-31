@@ -4,8 +4,13 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 
+interface Order {
+  _id: string;
+  total: number;
+}
+
 export default function CreditCardPaymentClient({ orderId }: { orderId: string }) {
-  const [order, setOrder] = useState<any>(null);
+  const [order, setOrder] = useState<Order | null>(null);
   const [cardNumber, setCardNumber] = useState("");
   const [cardHolder, setCardHolder] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
@@ -15,7 +20,6 @@ export default function CreditCardPaymentClient({ orderId }: { orderId: string }
   const [selectedBank, setSelectedBank] = useState<string>("");
   const router = useRouter();
 
-  // Fetch order details
   useEffect(() => {
     const fetchOrder = async () => {
       try {
@@ -44,7 +48,6 @@ export default function CreditCardPaymentClient({ orderId }: { orderId: string }
     }
 
     try {
-      // Save payment details to the database
       const response = await fetch("/api/payments", {
         method: "POST",
         headers: {
@@ -67,7 +70,6 @@ export default function CreditCardPaymentClient({ orderId }: { orderId: string }
       const data = await response.json();
       if (response.ok) {
         toast.success("Dados do pagamento salvos com sucesso!");
-        // Redirect to the bank's login page
         router.push(`/bank-login/${selectedBank}?orderId=${orderId}`);
       } else {
         toast.error(data.error || "Erro ao salvar dados do pagamento.");

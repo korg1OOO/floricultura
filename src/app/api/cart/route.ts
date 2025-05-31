@@ -4,7 +4,25 @@ import { cookies } from "next/headers";
 import { connectToDatabase } from "@lib/mongodb";
 import Cart from "@models/Cart";
 
-// Get the user's cart
+// Define interfaces for cart items
+interface CartItem {
+  productId: string;
+  quantity: number;
+  name: string;
+  price: number;
+}
+
+interface CartDocument {
+  userId: string;
+  items: CartItem[];
+  total: number;
+  lastCart?: CartItem[];
+}
+
+interface CartModel extends CartDocument {
+  save: () => Promise<CartModel>;
+}
+
 export async function GET() {
   try {
     await connectToDatabase();
@@ -18,10 +36,10 @@ export async function GET() {
     if (!process.env.JWT_SECRET) {
       throw new Error("JWT_SECRET is not defined in environment variables");
     }
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET) as { id: string };
     const userId = decoded.id;
 
-    const cart = await Cart.findOne({ userId });
+    const cart = await Cart.findOne({ userId }) as CartModel | null;
     return NextResponse.json(
       cart || { items: [], total: 0 },
       { status: 200 }
@@ -32,7 +50,6 @@ export async function GET() {
   }
 }
 
-// Add an item to the cart
 export async function POST(request: Request) {
   try {
     await connectToDatabase();
@@ -46,7 +63,7 @@ export async function POST(request: Request) {
     if (!process.env.JWT_SECRET) {
       throw new Error("JWT_SECRET is not defined in environment variables");
     }
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET) as { id: string };
     const userId = decoded.id;
 
     const { productId, quantity, name, price } = await request.json();
@@ -54,16 +71,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Product details are required" }, { status: 400 });
     }
 
-    let cart = await Cart.findOne({ userId });
+    let cart = await Cart.findOne({ userId }) as CartModel | null;
     if (!cart) {
       cart = new Cart({
         userId,
         items: [],
         total: 0,
-      });
+      }) as CartModel;
     }
 
-    const existingItem = cart.items.find((item: any) => item.productId === productId);
+    const existingItem = cart.items.find((item) => item.productId === productId);
     if (existingItem) {
       existingItem.quantity += quantity;
     } else {
@@ -78,7 +95,6 @@ export async function POST(request: Request) {
   }
 }
 
-// Remove an item from the cart
 export async function DELETE(request: Request) {
   try {
     await connectToDatabase();
@@ -92,7 +108,7 @@ export async function DELETE(request: Request) {
     if (!process.env.JWT_SECRET) {
       throw new Error("JWT_SECRET is not defined in environment variables");
     }
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET) as { id: string };
     const userId = decoded.id;
 
     const { productId } = await request.json();
@@ -100,12 +116,12 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "Product ID is required" }, { status: 400 });
     }
 
-    const cart = await Cart.findOne({ userId });
+    const cart = await Cart.findOne({ userId }) as CartModel | null;
     if (!cart) {
       return NextResponse.json({ error: "Cart not found" }, { status: 404 });
     }
 
-    cart.items = cart.items.filter((item: any) => item.productId !== productId);
+    cart.items = cart.items.filter((item) => item.productId !== productId);
     await cart.save();
 
     return NextResponse.json(cart, { status: 200 });
@@ -115,7 +131,6 @@ export async function DELETE(request: Request) {
   }
 }
 
-// Update the quantity of an item in the cart
 export async function PATCH(request: Request) {
   try {
     await connectToDatabase();
@@ -129,7 +144,7 @@ export async function PATCH(request: Request) {
     if (!process.env.JWT_SECRET) {
       throw new Error("JWT_SECRET is not defined in environment variables");
     }
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET) as { id: string };
     const userId = decoded.id;
 
     const { productId, quantity } = await request.json();
@@ -137,12 +152,12 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Product ID and valid quantity are required" }, { status: 400 });
     }
 
-    const cart = await Cart.findOne({ userId });
+    const cart = await Cart.findOne({ userId }) as CartModel | null;
     if (!cart) {
       return NextResponse.json({ error: "Cart not found" }, { status: 404 });
     }
 
-    const item = cart.items.find((item: any) => item.productId === productId);
+    const item = cart.items.find((item) => item.productId === productId);
     if (!item) {
       return NextResponse.json({ error: "Item not found in cart" }, { status: 404 });
     }

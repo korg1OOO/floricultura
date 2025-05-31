@@ -9,9 +9,34 @@ import WhatsAppFloat from "@/components/WhatsAppFloat";
 import { allProducts } from "@data/products";
 import { useAuth } from "@/context/AuthContext";
 
+interface CartItem {
+  productId: number;
+  quantity: number;
+  name: string;
+  price: number;
+}
+
+interface Cart {
+  items: CartItem[];
+  total: number;
+}
+
+interface Product {
+  id: number;
+  name: string;
+  code: string;
+  price: number;
+  image: string;
+  quantity: number;
+  originalPrice?: number;
+  installments: string;
+  discount?: number;
+  category: string[];
+}
+
 export default function CheckoutClient() {
-  const [cart, setCart] = useState<{ items: { productId: number; quantity: number; name: string; price: number }[], total: number }>({ items: [], total: 0 });
-  const [paymentMethod, setPaymentMethod] = useState<"creditCard" | "pix" | null>("pix"); // Default to "pix"
+  const [cart, setCart] = useState<Cart>({ items: [], total: 0 });
+  const [paymentMethod, setPaymentMethod] = useState<"creditCard" | "pix" | null>("pix");
   const [isRestoring, setIsRestoring] = useState(false);
   const [hasRestored, setHasRestored] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
@@ -24,21 +49,18 @@ export default function CheckoutClient() {
   const searchParams = useSearchParams();
   const hasFetched = useRef(false);
 
-  // Save hasRestored to local storage whenever it changes
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("hasRestored", hasRestored.toString());
     }
   }, [hasRestored]);
 
-  // Redirect to login if not authenticated
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       router.push("/login");
     }
   }, [loading, isAuthenticated, router]);
 
-  // Memoize fetchCart to prevent unnecessary re-runs
   const fetchCart = useCallback(async () => {
     if (!isAuthenticated || hasFetched.current) {
       return;
@@ -48,7 +70,6 @@ export default function CheckoutClient() {
     console.log("Running fetchCart...");
 
     try {
-      // Fetch the cart
       const response = await fetch("/api/cart", { credentials: "include" });
       const data = await response.json();
       if (!response.ok) {
@@ -59,7 +80,6 @@ export default function CheckoutClient() {
 
       console.log("Fetched cart:", data);
 
-      // Check if returning from payment page and hasn't restored yet
       const fromPayment = searchParams.get("fromPayment") === "true";
       if (fromPayment && data.lastCart && data.lastCart.length > 0 && data.items.length === 0 && !hasRestored) {
         setIsRestoring(true);
@@ -78,7 +98,6 @@ export default function CheckoutClient() {
             setCart(restoredData);
             setHasRestored(true);
             toast.success("Carrinho restaurado!");
-            // Fetch the cart again to ensure the state is up-to-date
             const updatedCartResponse = await fetch("/api/cart", { credentials: "include" });
             const updatedCartData = await updatedCartResponse.json();
             if (updatedCartResponse.ok) {
@@ -110,15 +129,13 @@ export default function CheckoutClient() {
     }
   }, [isAuthenticated, searchParams, hasRestored]);
 
-  // Load cart from MongoDB only if authenticated
   useEffect(() => {
     if (loading) return;
     if (!hasFetched.current) {
       fetchCart();
     }
-  }, [loading, isAuthenticated]);
+  }, [loading, isAuthenticated, fetchCart]);
 
-  // Reset hasFetched when navigating away
   useEffect(() => {
     return () => {
       hasFetched.current = false;
@@ -126,13 +143,12 @@ export default function CheckoutClient() {
   }, []);
 
   const cartProducts = cart.items
-    .map((item: any) => {
+    .map((item: CartItem) => {
       const product = allProducts.find((p) => p.id === item.productId);
-      return { ...product, quantity: item.quantity };
+      return product ? { ...product, quantity: item.quantity } : null;
     })
-    .filter((product: any) => product);
+    .filter((product): product is Product => product !== null);
 
-  // Remove an item from the cart
   const handleRemoveItem = async (productId: number) => {
     try {
       const response = await fetch("/api/cart", {
@@ -156,7 +172,6 @@ export default function CheckoutClient() {
     }
   };
 
-  // Update the quantity of an item in the cart
   const handleUpdateQuantity = async (productId: number, newQuantity: number) => {
     if (newQuantity < 1) return;
     try {
@@ -202,10 +217,10 @@ export default function CheckoutClient() {
       });
       const data = await response.json();
       if (response.ok) {
-        setCart({ items: [], total: 0 }); // Clear the cart on the client side
-        setHasRestored(false); // Reset restoration flag for new checkout
+        setCart({ items: [], total: 0 });
+        setHasRestored(false);
         if (typeof window !== "undefined") {
-          localStorage.setItem("hasRestored", "false"); // Reset in local storage
+          localStorage.setItem("hasRestored", "false");
         }
         if (paymentMethod === "pix") {
           router.push(`/pix-payment/${data.order._id}`);
@@ -237,7 +252,7 @@ export default function CheckoutClient() {
                 <h2 className="text-2xl font-semibold text-gray-800 mb-4">
                   Itens no Carrinho
                 </h2>
-                {cartProducts.map((product: any) => (
+                {cartProducts.map((product) => (
                   <div
                     key={product.id}
                     className="flex items-center bg-gray-50 p-4 rounded-lg mb-4 shadow-sm"
@@ -289,7 +304,7 @@ export default function CheckoutClient() {
                   Resumo do Pedido
                 </h2>
                 <p className="text-gray-600 mb-2">
-                  Total de Itens: {cartProducts.reduce((sum: number, product: any) => sum + product.quantity, 0)}
+                  Total de Itens: {cartProducts.reduce((sum, product) => sum + product.quantity, 0)}
                 </p>
                 <p className="text-lg font-bold text-gray-800 mb-4">
                   Total: {cart.total.toLocaleString("pt-BR", {
@@ -310,7 +325,7 @@ export default function CheckoutClient() {
                       checked={paymentMethod === "creditCard"}
                       onChange={() => setPaymentMethod("creditCard")}
                       className="mr-2"
-                      disabled // Make it unclickable
+                      disabled
                     />
                     <label htmlFor="creditCard" className="text-gray-600">
                       Cartão de Crédito <span className="text-red-500 text-sm">(em manutenção)</span>

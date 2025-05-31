@@ -1,28 +1,56 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import WhatsAppFloat from "@/components/WhatsAppFloat";
 import { toast } from "react-hot-toast";
 
-export default function PixPayment() {
+// Define the Order type
+interface Order {
+  _id: string;
+  total: number;
+  pixKey?: string;
+}
+
+// Define the params type for the dynamic route
+interface PixParams {
+  orderId: string;
+}
+
+// Define the props type expected by Next.js for a dynamic page
+interface PixPaymentPageProps {
+  params: Promise<PixParams>;
+}
+
+export default function PixPayment({ params }: PixPaymentPageProps) {
   const router = useRouter();
-  const { orderId } = useParams();
-  const [order, setOrder] = useState<any>(null);
+  const [order, setOrder] = useState<Order | null>(null);
   const [pixData, setPixData] = useState<{ chavePix: string; amount: number } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [resolvedParams, setResolvedParams] = useState<PixParams | null>(null);
+
+  // Resolve the params Promise
+  useEffect(() => {
+    const resolveParams = async () => {
+      const { orderId } = await params;
+      setResolvedParams({ orderId });
+    };
+    resolveParams();
+  }, [params]);
 
   useEffect(() => {
     const fetchOrder = async () => {
+      if (!resolvedParams?.orderId) return;
+
       try {
-        const response = await fetch(`/api/orders/${orderId}`, {
+        const response = await fetch(`/api/orders/${resolvedParams.orderId}`, {
           credentials: "include",
         });
         const data = await response.json();
         if (response.ok) {
-          console.log("Fetched order:", data.order); // Debug log
+          console.log("Fetched order:", data.order);
           setOrder(data.order);
           setPixData({ chavePix: data.order.pixKey || "385e84bb-09e4-4c38-a812-c7c4e1378383", amount: data.order.total });
         } else {
@@ -38,10 +66,10 @@ export default function PixPayment() {
       }
     };
 
-    if (orderId) {
+    if (resolvedParams?.orderId) {
       fetchOrder();
     }
-  }, [orderId, router]);
+  }, [resolvedParams, router]);
 
   const handleCopyChavePix = () => {
     if (pixData?.chavePix) {
@@ -53,6 +81,10 @@ export default function PixPayment() {
   const handleBackToCheckout = () => {
     router.push("/checkout?fromPayment=true");
   };
+
+  if (!resolvedParams) {
+    return <div>Carregando parâmetros...</div>;
+  }
 
   if (loading) {
     return <div>Carregando...</div>;

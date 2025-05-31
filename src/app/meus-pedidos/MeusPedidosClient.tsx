@@ -8,21 +8,36 @@ import Footer from "@/components/Footer";
 import WhatsAppFloat from "@/components/WhatsAppFloat";
 import { useAuth } from "@/context/AuthContext";
 
+interface CartItem {
+  productId: number;
+  quantity: number;
+  name: string;
+  price: number;
+}
+
+interface Order {
+  _id: string;
+  createdAt: string;
+  status: string;
+  paymentMethod: string;
+  pixKey?: string;
+  total: number;
+  items: CartItem[];
+}
+
 export default function MeusPedidosClient() {
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const router = useRouter();
   const { isAuthenticated, loading } = useAuth();
 
-  // Redirect to login if not authenticated
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       router.push("/login");
     }
   }, [loading, isAuthenticated, router]);
 
-  // Load orders from MongoDB only if authenticated
   useEffect(() => {
-    if (loading) return; // Wait for auth check to complete
+    if (loading) return;
     if (!isAuthenticated) {
       setOrders([]);
       return;
@@ -78,7 +93,7 @@ export default function MeusPedidosClient() {
                     })}
                   </p>
                   <h3 className="text-xl font-semibold text-gray-800 mb-2">Itens:</h3>
-                  {order.items.map((item: any) => (
+                  {order.items.map((item) => (
                     <div key={item.productId} className="flex items-center mb-4">
                       <div className="flex-1">
                         <h4 className="text-lg font-semibold text-gray-800">{item.name}</h4>

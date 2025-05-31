@@ -11,9 +11,9 @@ interface IOrder extends Document {
   userId: string;
   items: IOrderItem[];
   total: number;
-  status: string;
   paymentMethod: string;
-  pixKey?: string; // Add pixKey as an optional field
+  pixKey?: string;
+  status: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -23,25 +23,21 @@ const orderSchema: Schema = new Schema({
   items: [
     {
       productId: { type: Number, required: true },
-      quantity: { type: Number, required: true },
+      quantity: { type: Number, required: true, default: 1 },
       name: { type: String, required: true },
       price: { type: Number, required: true },
     },
   ],
-  total: { type: Number, required: true },
-  status: {
-    type: String,
-    required: true,
-    default: "pending",
-    enum: ["pending", "completed", "cancelled"],
-  },
-  paymentMethod: { type: String, required: true, enum: ["creditCard", "pix"] },
-  pixKey: { type: String }, // Add this field
+  total: { type: Number, required: true, default: 0 },
+  paymentMethod: { type: String, required: true },
+  pixKey: { type: String },
+  status: { type: String, default: "pending" },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });
 
-orderSchema.pre("save", function (next) {
+// Explicitly type `this` as `IOrder` in the pre-save hook
+orderSchema.pre("save", function (this: IOrder, next) {
   this.updatedAt = new Date();
   this.total = this.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   next();

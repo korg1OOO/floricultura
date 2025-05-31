@@ -13,7 +13,7 @@ interface ICart extends Document {
   total: number;
   createdAt: Date;
   updatedAt: Date;
-  lastCart?: ICartItem[]; // New field to store the last cart items
+  lastCart?: ICartItem[];
 }
 
 const cartSchema: Schema = new Schema({
@@ -39,7 +39,8 @@ const cartSchema: Schema = new Schema({
   ],
 });
 
-cartSchema.pre("save", function (next) {
+// Explicitly type `this` as `ICart` in the pre-save hook
+cartSchema.pre("save", function (this: ICart, next) {
   this.updatedAt = new Date();
   this.total = this.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   next();
