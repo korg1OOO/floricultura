@@ -1,0 +1,6 @@
+# Set all text files to use LF in the repository
+* text=auto eol=lf
+
+# Ensure lockfiles use LF
+package-lock.json text eol=lf
+bun.lock text eol=lf
