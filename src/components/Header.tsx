@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image"; // Add Image import
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "react-hot-toast";
@@ -38,8 +39,15 @@ export default function Header() {
   return (
     <header className="bg-white shadow-md">
       <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-        <Link href="/" className="text-2xl font-bold text-gray-800">
-          Flor de Lima
+        <Link href="/">
+          <Image
+            src="https://cdn.awsli.com.br/400x300/1732/1732198/logo/d5ef4d0d4e.png"
+            alt="Flor de Lima Logo"
+            width={120} // Adjusted for header size
+            height={48} // Maintains 400:300 aspect ratio (scaled down)
+            className="object-contain"
+            priority // Load eagerly since it's in the header
+          />
         </Link>
 
         <nav className="hidden md:flex space-x-6">

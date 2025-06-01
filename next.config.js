@@ -32,6 +32,11 @@ module.exports = withBundleAnalyzer({
         hostname: 'images.unsplash.com',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'cdn.awsli.com.br', // Added for the logo
+        pathname: '/**',
+      },
     ],
   },
   webpack(config, { isServer }) {
@@ -40,7 +45,7 @@ module.exports = withBundleAnalyzer({
     }
     config.optimization.splitChunks = {
       chunks: 'all',
-      maxSize: 100000, // 100KB to create smallerMond chunks
+      maxSize: 100000, // 100KB to create smaller chunks
       minSize: 20000, // Allow smaller modules to split
       cacheGroups: {
         vendors: {

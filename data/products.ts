@@ -148,8 +148,8 @@ export const allProducts: Product[] = [
     name: "Buquê de Borboletas e Stitch",
     code: "Código: CRFC-FELIZ",
     image: "https://res.cloudinary.com/dqknds48u/image/upload/v1748809038/WhatsApp_Image_2025-06-01_at_16.22.20_xqyhvm.jpg",
-    price: 109.90,
-    installments: "2x de R$ 54,95",
+    price: 25.90,
+    installments: "2x de R$ 12,95",
     category: ["buques", "mais-vendidos"],
   },
   {
