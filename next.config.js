@@ -42,7 +42,7 @@ module.exports = withBundleAnalyzer({
     }
     config.optimization.splitChunks = {
       chunks: 'all',
-      maxSize: 200000, // 200KB to create smaller chunks
+      maxSize: 100000, // 200KB to create smaller chunks
       minSize: 20000, // Allow smaller modules to split
       cacheGroups: {
         vendors: {
