@@ -36,8 +36,6 @@ module.exports = withBundleAnalyzer({
   },
   output: 'standalone', // Minimize build output
   compress: true, // Enable compression
-  cacheHandler: require.resolve('next/dist/server/cache-handler'), // Enable caching for Next.js 15.x
-  cacheMaxMemorySize: 0, // Disable in-memory cache
   webpack(config, { isServer }) {
     if (!isServer) {
       config.externals.push('mongoose', 'sharp');
