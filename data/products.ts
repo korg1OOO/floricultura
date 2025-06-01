@@ -55,7 +55,7 @@ export const allProducts: Product[] = [
     id: 6,
     name: "Kit dia dos namorados. Caixa e Carta Personalizada com o nome do seu amado, ursinho tamanho P e chocolates para alegrar seu dia!",
     code: "Código: CRUD-AMOR",
-    image: "https://web.whatsapp.com/35c30af9-b0c7-43e5-9490-f7943d0b9aa4",
+    image: "https://res.cloudinary.com/dqknds48u/image/upload/v1748735092/item6_ywqmxk.webp",
     price: 29.90,
     installments: "2x de R$ 15,00",
     category: ["cestas", "cestas-romanticas", "destaques"],
