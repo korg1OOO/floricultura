@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { toast } from "react-hot-toast";
 
 export default function Header() {
-  const { user, setUser, refreshAuth } = useAuth(); // Add refreshAuth here
+  const { user, setUser, refreshAuth } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const toggleMenu = () => {
@@ -14,17 +15,23 @@ export default function Header() {
 
   const handleLogout = async () => {
     try {
-      const response = await fetch("/api/logout", {
+      const response = await fetch("/api/auth/logout", {
         method: "POST",
         credentials: "include",
       });
+
       if (response.ok) {
-        setUser(null); // Update the auth context
-        await refreshAuth(); // Refresh auth state to confirm logout
+        setUser(null);
+        await refreshAuth();
+        toast.success("Logout realizado com sucesso!", { duration: 3000 });
         window.location.href = "/login";
+      } else {
+        const data = await response.json();
+        toast.error(data.error || "Erro ao fazer logout.", { duration: 3000 });
       }
     } catch (error) {
       console.error("Logout failed:", error);
+      toast.error("Erro ao fazer logout.", { duration: 3000 });
     }
   };
 

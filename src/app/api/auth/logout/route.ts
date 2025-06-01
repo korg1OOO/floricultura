@@ -5,6 +5,11 @@ export async function POST() {
     { message: "Logout successful" },
     { status: 200 }
   );
-  response.cookies.delete("token");
+  response.cookies.delete({
+    name: "token",
+    path: "/",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
   return response;
 }
