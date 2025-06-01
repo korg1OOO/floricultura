@@ -5,7 +5,7 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 
 module.exports = withBundleAnalyzer({
   images: {
-    unoptimized: false, // Keep for optimized images
+    unoptimized: false,
     remotePatterns: [
       {
         protocol: 'https',
@@ -34,11 +34,13 @@ module.exports = withBundleAnalyzer({
       },
     ],
   },
-  output: 'standalone', // Minimize build output for Cloudflare Pages
+  output: 'standalone', // Minimize build output
   compress: true, // Enable compression
+  cacheHandler: require.resolve('next/dist/server/cache-handler'), // Enable caching for Next.js 15.x
+  cacheMaxMemorySize: 0, // Disable in-memory cache
   webpack(config, { isServer }) {
     if (!isServer) {
-      config.externals.push('mongoose', 'sharp'); // Externalize server-side dependencies
+      config.externals.push('mongoose', 'sharp');
     }
     config.optimization.splitChunks = {
       chunks: 'all',
@@ -58,7 +60,6 @@ module.exports = withBundleAnalyzer({
       },
     };
     config.optimization.minimize = true; // Ensure minification
-    // Optimize CSS assets
     config.module.rules.push({
       test: /\.css$/,
       use: [
