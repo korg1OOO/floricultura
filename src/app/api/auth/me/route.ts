@@ -8,25 +8,19 @@ export async function GET() {
     const token = cookieStore.get("token")?.value;
 
     if (!token) {
-      return NextResponse.json(
-        { error: "Not authenticated" },
-        { status: 401 }
-      );
+      return NextResponse.json({ user: null }, { status: 401 });
     }
 
     if (!process.env.JWT_SECRET) {
       throw new Error("JWT_SECRET is not defined in environment variables");
     }
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET) as { id: string; email: string; name: string };
     return NextResponse.json(
-      { user: decoded },
+      { user: { id: decoded.id, email: decoded.email, name: decoded.name } },
       { status: 200 }
     );
   } catch (error) {
     console.error("Auth error:", error);
-    return NextResponse.json(
-      { error: "Invalid token" },
-      { status: 401 }
-    );
+    return NextResponse.json({ user: null }, { status: 401 });
   }
 }
