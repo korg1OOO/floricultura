@@ -5,7 +5,7 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 
 module.exports = withBundleAnalyzer({
   images: {
-    unoptimized: false, // Keep this for optimized images
+    unoptimized: false,
     remotePatterns: [
       {
         protocol: 'https',
@@ -34,18 +34,18 @@ module.exports = withBundleAnalyzer({
       },
     ],
   },
-  // Enable static export if applicable (reduces bundle size for static sites)
-  output: 'standalone', // Use standalone output for smaller, self-contained builds
-  // Optimize Webpack configuration
+  output: 'standalone', // Minimize build output
+  compress: true, // Enable compression
+  cacheHandler: require.resolve('next/dist/server/cache-handler'),
+  cacheMaxMemorySize: 0, // Disable in-memory cache
   webpack(config, { isServer }) {
     if (!isServer) {
-      // Externalize large dependencies to reduce client-side bundle size
       config.externals.push('mongoose', 'sharp');
     }
     config.optimization.splitChunks = {
       chunks: 'all',
-      maxSize: 250000, // Reduce maxSize to 250KB to create smaller chunks
-      minSize: 30000, // Lower minSize to ensure smaller modules are split
+      maxSize: 200000, // 200KB to create smaller chunks
+      minSize: 20000, // Allow smaller modules to split
       cacheGroups: {
         vendors: {
           test: /[\\/]node_modules[\\/]/,
@@ -59,13 +59,15 @@ module.exports = withBundleAnalyzer({
         },
       },
     };
-    // Add compression for JS/CSS files
-    config.optimization.minimize = true; // Ensure minification is enabled
+    config.optimization.minimize = true; // Ensure minification
+    // Optimize CSS assets
+    config.module.rules.push({
+      test: /\.css$/,
+      use: [
+        { loader: 'css-loader', options: { importLoaders: 1 } },
+        { loader: 'postcss-loader', options: { postcssOptions: { plugins: ['cssnano'] } } },
+      ],
+    });
     return config;
   },
-  // Enable compression for Cloudflare Pages
-  compress: true,
-  // Configure caching for faster rebuilds
-  cacheHandler: require.resolve('next/dist/server/cache-handler'),
-  cacheMaxMemorySize: 0, // Disable in-memory cache to reduce build size
 });
