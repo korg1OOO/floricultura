@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "react-hot-toast";
-import Image from "next/image"; // Import Image component
+import Image from "next/image";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import WhatsAppFloat from "@/components/WhatsAppFloat";
@@ -20,6 +20,7 @@ interface CartItem {
 interface Cart {
   items: CartItem[];
   total: number;
+  lastCart?: CartItem[];
 }
 
 interface Product {
@@ -36,6 +37,10 @@ interface Product {
 }
 
 export default function CheckoutClient() {
+  const { isAuthenticated, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromPayment = searchParams.get("fromPayment") === "true";
   const [cart, setCart] = useState<Cart>({ items: [], total: 0 });
   const [paymentMethod, setPaymentMethod] = useState<"creditCard" | "pix" | null>("pix");
   const [isRestoring, setIsRestoring] = useState(false);
@@ -45,10 +50,68 @@ export default function CheckoutClient() {
     }
     return false;
   });
-  const router = useRouter();
-  const { isAuthenticated, loading } = useAuth();
-  const searchParams = useSearchParams();
   const hasFetched = useRef(false);
+  const [hasLoadedAuth, setHasLoadedAuth] = useState(false);
+
+  const fetchCart = useCallback(async () => {
+    if (!isAuthenticated || hasFetched.current) {
+      console.log("CheckoutClient: Skipping fetchCart, already fetched or not authenticated");
+      return;
+    }
+
+    hasFetched.current = true;
+    console.log("CheckoutClient: Running fetchCart...");
+
+    try {
+      console.log("CheckoutClient: Fetching cart from /api/cart");
+      const response = await fetch("/api/cart", { credentials: "include" });
+      console.log("CheckoutClient: Response status:", response.status);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch /api/cart: ${response.status} ${response.statusText}`);
+      }
+      const data = await response.json();
+      console.log("CheckoutClient: Cart data:", data);
+
+      if (fromPayment && data.lastCart && data.lastCart.length > 0 && data.items.length === 0 && !hasRestored) {
+        setIsRestoring(true);
+        try {
+          console.log("CheckoutClient: Attempting to restore cart...");
+          const restoreResponse = await fetch("/api/cart/restore", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+          });
+          if (!restoreResponse.ok) {
+            throw new Error(`Failed to fetch /api/cart/restore: ${restoreResponse.status} ${restoreResponse.statusText}`);
+          }
+          const restoredData = await restoreResponse.json();
+          if (restoredData.error) {
+            throw new Error(restoredData.error);
+          }
+          console.log("CheckoutClient: Restored cart:", restoredData);
+          setCart(restoredData);
+          setHasRestored(true);
+          toast.success("Carrinho restaurado!");
+        } catch (error: any) {
+          console.error("CheckoutClient: Error during cart restoration:", error);
+          setCart(data);
+          if (error.message !== "No previous cart to restore") {
+            toast.error(error.message || "Erro ao restaurar o carrinho.");
+          }
+        } finally {
+          setIsRestoring(false);
+        }
+      } else {
+        console.log("CheckoutClient: Cart fetch successful, setting cart:", data);
+        setCart(data);
+      }
+    } catch (error: any) {
+      console.error("CheckoutClient: Error fetching cart:", error);
+      toast.error(error.message || "Erro ao carregar o carrinho.");
+    }
+  }, [isAuthenticated, hasRestored, fromPayment]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -57,88 +120,34 @@ export default function CheckoutClient() {
   }, [hasRestored]);
 
   useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      router.push("/login");
-    }
-  }, [loading, isAuthenticated, router]);
-
-  const fetchCart = useCallback(async () => {
-    if (!isAuthenticated || hasFetched.current) {
+    if (authLoading) {
+      console.log("CheckoutClient: Still loading auth state");
       return;
     }
-
-    hasFetched.current = true;
-    console.log("Running fetchCart...");
-
-    try {
-      const response = await fetch("/api/cart", { credentials: "include" });
-      const data = await response.json();
-      if (!response.ok) {
-        setCart({ items: [], total: 0 });
-        toast.error(data.error || "Erro ao carregar o carrinho.");
-        return;
-      }
-
-      console.log("Fetched cart:", data);
-
-      const fromPayment = searchParams.get("fromPayment") === "true";
-      if (fromPayment && data.lastCart && data.lastCart.length > 0 && data.items.length === 0 && !hasRestored) {
-        setIsRestoring(true);
-        try {
-          console.log("Attempting to restore cart...");
-          const restoreResponse = await fetch("/api/cart/restore", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            credentials: "include",
-          });
-          const restoredData = await restoreResponse.json();
-          if (restoreResponse.ok) {
-            console.log("Restored cart:", restoredData);
-            setCart(restoredData);
-            setHasRestored(true);
-            toast.success("Carrinho restaurado!");
-            const updatedCartResponse = await fetch("/api/cart", { credentials: "include" });
-            const updatedCartData = await updatedCartResponse.json();
-            if (updatedCartResponse.ok) {
-              console.log("Updated cart after restoration:", updatedCartData);
-              setCart(updatedCartData);
-            }
-          } else {
-            console.error("Restore failed:", restoredData.error);
-            setCart(data);
-            if (restoredData.error !== "No previous cart to restore") {
-              toast.error(restoredData.error || "Erro ao restaurar o carrinho.");
-            }
-          }
-        } catch (error) {
-          console.error("Error during cart restoration:", error);
-          setCart(data);
-          toast.error("Erro ao restaurar o carrinho.");
-        } finally {
-          setIsRestoring(false);
-        }
-      } else {
-        console.log("Setting cart without restoration:", data);
-        setCart(data);
-      }
-    } catch (error) {
-      console.error("Error fetching cart:", error);
-      setCart({ items: [], total: 0 });
-      toast.error("Erro ao carregar o carrinho.");
+    console.log("CheckoutClient: Auth loading complete, hasLoadedAuth:", hasLoadedAuth);
+    setHasLoadedAuth(true);
+    if (!isAuthenticated) {
+      console.log("CheckoutClient: Not authenticated, redirecting to login");
+      router.push("/login");
     }
-  }, [isAuthenticated, searchParams, hasRestored]);
+  }, [authLoading, isAuthenticated, router]);
 
   useEffect(() => {
-    if (loading) return;
-    if (!hasFetched.current) {
-      fetchCart();
+    if (!hasLoadedAuth) {
+      console.log("CheckoutClient: Waiting for auth to load, hasLoadedAuth:", hasLoadedAuth);
+      return;
     }
-  }, [loading, isAuthenticated, fetchCart]);
+    if (!isAuthenticated) {
+      console.log("CheckoutClient: Not authenticated, skipping fetchCart");
+      return;
+    }
+    console.log("CheckoutClient: Authenticated and auth loaded, fetching cart - should only run once");
+    fetchCart();
+  }, [hasLoadedAuth, isAuthenticated]);
 
   useEffect(() => {
     return () => {
+      console.log("CheckoutClient: Component unmounting, resetting hasFetched");
       hasFetched.current = false;
     };
   }, []);
@@ -168,7 +177,7 @@ export default function CheckoutClient() {
         toast.error(data.error || "Erro ao remover item do carrinho.");
       }
     } catch (error) {
-      console.error("Error removing item:", error);
+      console.error("CheckoutClient: Error removing item:", error);
       toast.error("Erro ao remover item do carrinho.");
     }
   };
@@ -192,7 +201,7 @@ export default function CheckoutClient() {
         toast.error(data.error || "Erro ao atualizar quantidade.");
       }
     } catch (error) {
-      console.error("Error updating quantity:", error);
+      console.error("CheckoutClient: Error updating quantity:", error);
       toast.error("Erro ao atualizar quantidade.");
     }
   };
@@ -222,23 +231,29 @@ export default function CheckoutClient() {
         setHasRestored(false);
         if (typeof window !== "undefined") {
           localStorage.setItem("hasRestored", "false");
+          localStorage.setItem("paymentMethod", paymentMethod);
+          localStorage.setItem("orderId", data.order._id);
         }
-        if (paymentMethod === "pix") {
-          router.push(`/pix-payment/${data.order._id}`);
-        } else if (paymentMethod === "creditCard") {
-          router.push(`/credit-card-payment/${data.order._id}`);
-        }
+        router.push("/address");
       } else {
         toast.error(data.error || "Erro ao finalizar a compra.");
       }
     } catch (error) {
-      console.error("Error during checkout:", error);
+      console.error("CheckoutClient: Error during checkout:", error);
       toast.error("Erro ao finalizar a compra.");
     }
   };
 
-  if (loading || isRestoring) {
-    return <div>Carregando...</div>;
+  if (authLoading) {
+    const timeout = setTimeout(() => {
+      console.error("CheckoutClient: Auth loading is taking too long. Please check AuthContext.");
+      toast.error("Erro ao carregar autenticação. Por favor, recarregue a página.");
+    }, 10000);
+    return () => clearTimeout(timeout);
+  }
+
+  if (isRestoring) {
+    return <div>Restaurando carrinho...</div>;
   }
 
   return (
@@ -290,7 +305,7 @@ export default function CheckoutClient() {
                         <button
                           onClick={() => handleUpdateQuantity(product.id, product.quantity + 1)}
                           className="text-gray-600 hover:text-gray-800 ml-2"
-                          >
+                        >
                           +
                         </button>
                       </div>

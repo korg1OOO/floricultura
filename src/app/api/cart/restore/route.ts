@@ -23,7 +23,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET) as { id: string };
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET) as { id: string };
+    } catch (error) {
+      console.error("JWT verification failed:", error);
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    }
     const userId = decoded.id;
 
     const cart = await Cart.findOne({ userId });
@@ -37,12 +43,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No previous cart to restore" }, { status: 400 });
     }
 
-    cart.items = cart.lastCart;
-    cart.lastCart = [];
-    await cart.save({ skipVersioning: true });
-    console.log("Cart after restoration:", cart);
+    const updatedCart = await Cart.findOneAndUpdate(
+      { userId },
+      {
+        $set: {
+          items: cart.lastCart,
+          lastCart: [],
+          total: cart.lastCart.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0),
+          updatedAt: new Date(),
+        },
+      },
+      { new: true } // Return the updated document
+    );
+    console.log("Cart after restoration:", updatedCart);
 
-    return NextResponse.json({ items: cart.items, total: cart.total }, { status: 200 });
+    return NextResponse.json(updatedCart, { status: 200 });
   } catch (error) {
     console.error("Error restoring cart:", error);
     return NextResponse.json({ error: "Failed to restore cart" }, { status: 500 });

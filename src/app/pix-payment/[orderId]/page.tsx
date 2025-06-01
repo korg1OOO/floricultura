@@ -122,7 +122,17 @@ export default function PixPayment({ params }: PixPaymentPageProps) {
               </button>
             </div>
             <p className="text-gray-600 mb-4">
-              Após realizar o pagamento, você pode verificar o status do pedido em{" "}
+              Após realizar o pagamento, envie o comprovante e personalize seu item enviando uma mensagem para o nosso WhatsApp{" "}
+              <a
+                href="https://wa.me/5564981187808"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline"
+              >
+                +55 64 98118-7808
+              </a>.
+              <br />
+              Você também pode verificar o status do pedido em{" "}
               <a href="/meus-pedidos" className="text-blue-600 hover:underline">
                 Meus Pedidos
               </a>.
