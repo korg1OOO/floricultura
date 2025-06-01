@@ -9,8 +9,8 @@ import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import WhatsAppFloat from "@/components/WhatsAppFloat";
-import Image from "next/image"; // Add Image import
-import { allProducts } from "@data/products"; // Add allProducts import
+import Image from "next/image";
+import { allProducts } from "@data/products";
 
 interface CartItem {
   productId: number;
@@ -42,6 +42,7 @@ export default function Carrinho() {
       toast.error("Por favor, faça login para ver seu carrinho.");
       router.push("/login");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, isAuthenticated, router]);
 
   useEffect(() => {
@@ -98,7 +99,7 @@ export default function Carrinho() {
     };
 
     fetchCart();
-  }, [hasLoadedAuth, isAuthenticated, router, setUser]);
+  }, [hasLoadedAuth, isAuthenticated, router, setUser, refreshAuth]);
 
   const formatPrice = (price: number) => {
     return price.toLocaleString("pt-BR", {
@@ -243,14 +244,12 @@ export default function Carrinho() {
             <>
               <div className="space-y-4">
                 {cart.items.map((item) => {
-                  // Find the product in allProducts to get the image
                   const product = allProducts.find((p) => p.id === item.productId);
                   return (
                     <div
                       key={item.productId}
                       className="flex items-center border-b pb-4"
                     >
-                      {/* Product Image */}
                       {product && product.image ? (
                         <div className="relative w-20 h-20 mr-4">
                           <Image
@@ -267,7 +266,6 @@ export default function Carrinho() {
                         </div>
                       )}
 
-                      {/* Product Details */}
                       <div className="flex-1">
                         <h2 className="text-lg font-semibold text-gray-800">{item.name}</h2>
                         <p className="text-gray-600">{formatPrice(item.price)} (x{item.quantity})</p>
@@ -288,7 +286,6 @@ export default function Carrinho() {
                         </div>
                       </div>
 
-                      {/* Price and Remove Button */}
                       <div className="flex items-center space-x-4">
                         <p className="text-lg font-bold text-gray-800">
                           {formatPrice(item.price * item.quantity)}
@@ -323,4 +320,11 @@ export default function Carrinho() {
       <WhatsAppFloat />
     </div>
   );
+}
+
+function formatPrice(price: number) {
+  return price.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
 }

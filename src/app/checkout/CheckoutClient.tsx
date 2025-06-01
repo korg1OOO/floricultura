@@ -53,6 +53,17 @@ export default function CheckoutClient() {
   const hasFetched = useRef(false);
   const [hasLoadedAuth, setHasLoadedAuth] = useState(false);
 
+  // Handle auth loading timeout
+  useEffect(() => {
+    if (authLoading) {
+      const timeout = setTimeout(() => {
+        console.error("CheckoutClient: Auth loading is taking too long. Please check AuthContext.");
+        toast.error("Erro ao carregar autenticação. Por favor, recarregue a página.");
+      }, 10000);
+      return () => clearTimeout(timeout);
+    }
+  }, [authLoading]);
+
   const fetchCart = useCallback(async () => {
     if (!isAuthenticated || hasFetched.current) {
       console.log("CheckoutClient: Skipping fetchCart, already fetched or not authenticated");
@@ -94,10 +105,10 @@ export default function CheckoutClient() {
           setCart(restoredData);
           setHasRestored(true);
           toast.success("Carrinho restaurado!");
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.error("CheckoutClient: Error during cart restoration:", error);
           setCart(data);
-          if (error.message !== "No previous cart to restore") {
+          if (error instanceof Error && error.message !== "No previous cart to restore") {
             toast.error(error.message || "Erro ao restaurar o carrinho.");
           }
         } finally {
@@ -107,9 +118,9 @@ export default function CheckoutClient() {
         console.log("CheckoutClient: Cart fetch successful, setting cart:", data);
         setCart(data);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("CheckoutClient: Error fetching cart:", error);
-      toast.error(error.message || "Erro ao carregar o carrinho.");
+      toast.error(error instanceof Error ? error.message : "Erro ao carregar o carrinho.");
     }
   }, [isAuthenticated, hasRestored, fromPayment]);
 
@@ -130,6 +141,7 @@ export default function CheckoutClient() {
       console.log("CheckoutClient: Not authenticated, redirecting to login");
       router.push("/login");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, isAuthenticated, router]);
 
   useEffect(() => {
@@ -143,6 +155,7 @@ export default function CheckoutClient() {
     }
     console.log("CheckoutClient: Authenticated and auth loaded, fetching cart - should only run once");
     fetchCart();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasLoadedAuth, isAuthenticated]);
 
   useEffect(() => {
@@ -245,15 +258,29 @@ export default function CheckoutClient() {
   };
 
   if (authLoading) {
-    const timeout = setTimeout(() => {
-      console.error("CheckoutClient: Auth loading is taking too long. Please check AuthContext.");
-      toast.error("Erro ao carregar autenticação. Por favor, recarregue a página.");
-    }, 10000);
-    return () => clearTimeout(timeout);
+    return (
+      <div className="min-h-screen bg-white">
+        <Header />
+        <main className="py-12">
+          <div className="container mx-auto px-4 py-8">Carregando...</div>
+        </main>
+        <Footer />
+        <WhatsAppFloat />
+      </div>
+    );
   }
 
   if (isRestoring) {
-    return <div>Restaurando carrinho...</div>;
+    return (
+      <div className="min-h-screen bg-white">
+        <Header />
+        <main className="py-12">
+          <div className="container mx-auto px-4 py-8">Restaurando carrinho...</div>
+        </main>
+        <Footer />
+        <WhatsAppFloat />
+      </div>
+    );
   }
 
   return (

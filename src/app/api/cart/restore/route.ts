@@ -6,6 +6,15 @@ import Cart from "@models/Cart";
 
 export const dynamic = "force-dynamic";
 
+// Define the type for cart items
+interface CartItem {
+  productId: number;
+  quantity: number;
+  name: string;
+  price: number;
+  _id: string; // ObjectId as a string
+}
+
 export async function POST(request: Request) {
   try {
     if (!process.env.MONGODB_URI) {
@@ -49,11 +58,11 @@ export async function POST(request: Request) {
         $set: {
           items: cart.lastCart,
           lastCart: [],
-          total: cart.lastCart.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0),
+          total: cart.lastCart.reduce((sum: number, item: CartItem) => sum + item.price * item.quantity, 0),
           updatedAt: new Date(),
         },
       },
-      { new: true } // Return the updated document
+      { new: true }
     );
     console.log("Cart after restoration:", updatedCart);
 
