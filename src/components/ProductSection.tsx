@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { MessageCircle, Heart } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image"; // Import Image component
+import Image from "next/image";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@/context/AuthContext";
 
@@ -29,28 +29,31 @@ interface ProductSectionProps {
 
 export default function ProductSection({ title, products }: ProductSectionProps) {
   const router = useRouter();
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, refreshAuth, setUser } = useAuth();
   const [cart, setCart] = useState<{ items: { productId: number; quantity: number; name: string; price: number }[], total: number }>({ items: [], total: 0 });
   const [favorites, setFavorites] = useState<number[]>([]);
 
   // Load cart from MongoDB only if authenticated
   useEffect(() => {
-    if (loading) return; // Wait for auth check to complete
+    if (loading) return;
     if (!isAuthenticated) {
       setCart({ items: [], total: 0 });
       return;
     }
     const fetchCart = async () => {
       try {
-        const response = await fetch("/api/cart");
+        console.log("ProductSection: Fetching cart");
+        const response = await fetch("/api/cart", { credentials: "include" });
+        console.log("ProductSection: Cart fetch response status:", response.status);
         const data = await response.json();
+        console.log("ProductSection: Cart fetch response data:", data);
         if (response.ok) {
           setCart(data);
         } else {
-          setCart({ items: [], total: 0 }); // Silently handle failure
+          setCart({ items: [], total: 0 });
         }
       } catch (error) {
-        console.error("Error fetching cart:", error);
+        console.error("ProductSection: Error fetching cart:", error);
         setCart({ items: [], total: 0 });
       }
     };
@@ -59,22 +62,25 @@ export default function ProductSection({ title, products }: ProductSectionProps)
 
   // Load favorites from MongoDB only if authenticated
   useEffect(() => {
-    if (loading) return; // Wait for auth check to complete
+    if (loading) return;
     if (!isAuthenticated) {
       setFavorites([]);
       return;
     }
     const fetchFavorites = async () => {
       try {
-        const response = await fetch("/api/favorites");
+        console.log("ProductSection: Fetching favorites");
+        const response = await fetch("/api/favorites", { credentials: "include" });
+        console.log("ProductSection: Favorites fetch response status:", response.status);
         const data = await response.json();
+        console.log("ProductSection: Favorites fetch response data:", data);
         if (response.ok) {
           setFavorites(data);
         } else {
-          setFavorites([]); // Silently handle failure
+          setFavorites([]);
         }
       } catch (error) {
-        console.error("Error fetching favorites:", error);
+        console.error("ProductSection: Error fetching favorites:", error);
         setFavorites([]);
       }
     };
@@ -95,76 +101,98 @@ export default function ProductSection({ title, products }: ProductSectionProps)
   };
 
   const addToCart = async (productId: number, productName: string, price: number) => {
+    await refreshAuth();
+    console.log("ProductSection: After refreshAuth in addToCart, isAuthenticated:", isAuthenticated);
+
     if (!isAuthenticated) {
+      console.log("ProductSection: Not authenticated, redirecting to /login");
       toast.error("Por favor, faça login para adicionar ao carrinho.");
       router.push("/login");
       return;
     }
+
     try {
+      console.log("ProductSection: Adding to cart:", { productId, quantity: 1, name: productName, price });
       const response = await fetch("/api/cart", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ productId, quantity: 1, name: productName, price }),
+        credentials: "include",
       });
 
+      console.log("ProductSection: Add to cart response status:", response.status);
       const data = await response.json();
+      console.log("ProductSection: Add to cart response data:", data);
+
+      if (response.status === 401) {
+        console.log("ProductSection: Received 401, session expired");
+        setUser(null);
+        toast.error("Sessão expirada. Por favor, faça login novamente.");
+        router.push("/login");
+        return;
+      }
+
       if (response.ok) {
+        console.log("ProductSection: Successfully added to cart, updating cart state");
         setCart(data);
-        toast.success(`${productName} foi adicionado ao seu carrinho!`, {
-          duration: 3000,
-        });
+        toast.success(`${productName} foi adicionado ao seu carrinho!`, { duration: 3000 });
         router.push("/checkout");
       } else {
+        console.error("ProductSection: Failed to add to cart:", data.error);
         toast.error(data.error || "Erro ao adicionar ao carrinho.");
       }
     } catch (error) {
+      console.error("ProductSection: Error in addToCart:", error);
       toast.error("Erro ao adicionar ao carrinho.");
     }
   };
 
   const toggleFavorite = async (productId: number, productName: string) => {
+    await refreshAuth();
+    console.log("ProductSection: After refreshAuth in toggleFavorite, isAuthenticated:", isAuthenticated);
+
     if (!isAuthenticated) {
+      console.log("ProductSection: Not authenticated, redirecting to /login");
       toast.error("Por favor, faça login para adicionar aos favoritos.");
       router.push("/login");
       return;
     }
+
     const action = favorites.includes(productId) ? "remove" : "add";
     try {
-      console.log("Sending POST /api/favorites with token cookie");
+      console.log("ProductSection: Sending POST /api/favorites with token cookie");
       const response = await fetch("/api/favorites", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ productId, action }),
         credentials: "include",
       });
 
+      console.log("ProductSection: Response from POST /api/favorites:", { status: response.status });
       const data = await response.json();
-      console.log("Response from POST /api/favorites:", { status: response.status, data });
+      console.log("ProductSection: Favorites response data:", data);
+
+      if (response.status === 401) {
+        console.log("ProductSection: Received 401 during toggleFavorite, session expired");
+        setUser(null);
+        toast.error("Sessão expirada. Por favor, faça login novamente.");
+        router.push("/login");
+        return;
+      }
+
       if (response.ok) {
         setFavorites(data);
         if (action === "remove") {
-          toast(`${productName} foi removido dos seus favoritos.`, {
-            duration: 3000,
-          });
+          toast(`${productName} foi removido dos seus favoritos.`, { duration: 3000 });
         } else {
-          toast.success(`${productName} foi adicionado aos seus favoritos!`, {
-            duration: 3000,
-          });
+          toast.success(`${productName} foi adicionado aos seus favoritos!`, { duration: 3000 });
         }
       } else {
-        console.error("Failed to update favorites:", data.error, "Status:", response.status);
+        console.error("ProductSection: Failed to update favorites:", data.error, "Status:", response.status);
         toast.error(data.error || "Erro ao atualizar os favoritos.");
-        if (response.status === 401) {
-          toast.error("Sessão expirada. Por favor, faça login novamente.");
-          setTimeout(() => router.push("/login"), 2000); // Redirect after showing toast
-        }
       }
     } catch (error) {
-      console.error("Error in toggleFavorite:", error);
+      console.error("ProductSection: Error in toggleFavorite:", error);
       toast.error("Erro ao atualizar os favoritos.");
     }
   };

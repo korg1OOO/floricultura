@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
 interface CartItem {
-  productId: string;
+  productId: number; // Changed to number to match /api/cart
   quantity: number;
   name: string;
   price: number;
@@ -27,34 +27,46 @@ export default function Carrinho() {
   // Fetch cart data when the component mounts
   useEffect(() => {
     const fetchCart = async () => {
-      if (loading) return;
+      if (loading) {
+        console.log("Carrinho: Still loading auth state");
+        return;
+      }
 
       // Revalidate session before fetching cart
       await refreshAuth();
+      console.log("Carrinho: After refreshAuth, isAuthenticated:", isAuthenticated);
 
       if (!isAuthenticated) {
+        console.log("Carrinho: Not authenticated, redirecting to /login");
         toast.error("Por favor, faça login para ver seu carrinho.");
         router.push("/login");
         return;
       }
 
       try {
+        console.log("Carrinho: Fetching cart from /api/cart");
         const response = await fetch("/api/cart", { credentials: "include" });
+        console.log("Carrinho: Response status:", response.status);
         const data = await response.json();
+        console.log("Carrinho: Cart data:", data);
+
         if (response.status === 401) {
+          console.log("Carrinho: Received 401, session expired");
           setUser(null);
           toast.error("Sessão expirada. Por favor, faça login novamente.");
           router.push("/login");
           return;
         }
         if (response.ok) {
+          console.log("Carrinho: Cart fetch successful, setting cart:", data);
           setCart(data);
         } else {
+          console.log("Carrinho: Cart fetch failed, resetting cart");
           setCart({ items: [], total: 0 });
           toast.error(data.error || "Erro ao carregar o carrinho.");
         }
       } catch (error) {
-        console.error("Error fetching cart:", error);
+        console.error("Carrinho: Error fetching cart:", error);
         setCart({ items: [], total: 0 });
         toast.error("Erro ao carregar o carrinho.");
       }
@@ -71,8 +83,9 @@ export default function Carrinho() {
   };
 
   // Remove item from cart
-  const removeFromCart = async (productId: string) => {
+  const removeFromCart = async (productId: number) => {
     try {
+      console.log("Carrinho: Removing item from cart:", productId);
       const response = await fetch("/api/cart", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
@@ -80,8 +93,12 @@ export default function Carrinho() {
         credentials: "include",
       });
 
+      console.log("Carrinho: Remove item response status:", response.status);
       const data = await response.json();
+      console.log("Carrinho: Remove item response data:", data);
+
       if (response.status === 401) {
+        console.log("Carrinho: Received 401 during remove, session expired");
         setUser(null);
         toast.error("Sessão expirada. Por favor, faça login novamente.");
         router.push("/login");
@@ -94,19 +111,20 @@ export default function Carrinho() {
         toast.error(data.error || "Erro ao remover o item.");
       }
     } catch (error) {
-      console.error("Error removing from cart:", error);
+      console.error("Carrinho: Error removing from cart:", error);
       toast.error("Erro ao remover o item.");
     }
   };
 
   // Update item quantity
-  const updateQuantity = async (productId: string, quantity: number) => {
+  const updateQuantity = async (productId: number, quantity: number) => {
     if (quantity < 1) {
       removeFromCart(productId);
       return;
     }
 
     try {
+      console.log("Carrinho: Updating quantity for product:", { productId, quantity });
       const response = await fetch("/api/cart", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -114,8 +132,12 @@ export default function Carrinho() {
         credentials: "include",
       });
 
+      console.log("Carrinho: Update quantity response status:", response.status);
       const data = await response.json();
+      console.log("Carrinho: Update quantity response data:", data);
+
       if (response.status === 401) {
+        console.log("Carrinho: Received 401 during update, session expired");
         setUser(null);
         toast.error("Sessão expirada. Por favor, faça login novamente.");
         router.push("/login");
@@ -128,7 +150,7 @@ export default function Carrinho() {
         toast.error(data.error || "Erro ao atualizar a quantidade.");
       }
     } catch (error) {
-      console.error("Error updating quantity:", error);
+      console.error("Carrinho: Error updating quantity:", error);
       toast.error("Erro ao atualizar a quantidade.");
     }
   };
@@ -194,7 +216,7 @@ export default function Carrinho() {
 
           <div className="mt-6 flex justify-between items-center">
             <h2 className="text-xl font-bold text-gray-800">
-              Total: {formatPrice(cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0))}
+              Total: {formatPrice(cart.total)}
             </h2>
             <Link href="/checkout">
               <Button className="bg-green-600 hover:bg-green-700 text-white">
