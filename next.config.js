@@ -34,7 +34,6 @@ module.exports = withBundleAnalyzer({
       },
     ],
   },
-  output: 'standalone', // Minimize build output
   compress: true, // Enable compression
   webpack(config, { isServer }) {
     if (!isServer) {
