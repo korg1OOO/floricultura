@@ -34,14 +34,13 @@ module.exports = withBundleAnalyzer({
       },
     ],
   },
-  compress: true, // Enable compression
   webpack(config, { isServer }) {
     if (!isServer) {
       config.externals.push('mongoose', 'sharp');
     }
     config.optimization.splitChunks = {
       chunks: 'all',
-      maxSize: 100000, // 200KB to create smaller chunks
+      maxSize: 100000, // 100KB to create smallerMond chunks
       minSize: 20000, // Allow smaller modules to split
       cacheGroups: {
         vendors: {
@@ -57,13 +56,6 @@ module.exports = withBundleAnalyzer({
       },
     };
     config.optimization.minimize = true; // Ensure minification
-    config.module.rules.push({
-      test: /\.css$/,
-      use: [
-        { loader: 'css-loader', options: { importLoaders: 1 } },
-        { loader: 'postcss-loader', options: { postcssOptions: { plugins: ['cssnano'] } } },
-      ],
-    });
     return config;
   },
 });
