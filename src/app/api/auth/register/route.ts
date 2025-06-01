@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
-import { connectToDatabase } from "@lib/mongodb"; // Updated import
-import User from "@models/User"; // Updated import
+import { connectToDatabase } from "@lib/mongodb";
+import User from "@models/User";
 
 export async function POST(request: Request) {
   try {
@@ -26,14 +25,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create new user
+    // Create new user with plain text password
     const user = new User({
       name,
       email,
-      password: hashedPassword,
+      password, // Store the password directly without hashing
     });
 
     await user.save();

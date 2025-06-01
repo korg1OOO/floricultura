@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 import { connectToDatabase } from "@lib/mongodb";
@@ -22,8 +21,8 @@ export async function POST(request: Request) {
         { status: 401 }
       );
     }
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
+    // Compare plain text passwords
+    if (password !== user.password) {
       return NextResponse.json(
         { error: "Invalid email or password" },
         { status: 401 }
