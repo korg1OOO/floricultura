@@ -1,45 +1,27 @@
 /** @type {import('next').NextConfig} */
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+});
+
 const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
   trailingSlash: true,
   images: {
-    unoptimized: false,
-    domains: [
-      "source.unsplash.com",
-      "images.unsplash.com",
-      "ext.same-assets.com",
-      "ugc.same-assets.com",
-    ],
     remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "source.unsplash.com",
-        pathname: "/**",
-      },
-      {
-        protocol: "https",
-        hostname: "images.unsplash.com",
-        pathname: "/**",
-      },
-      {
-        protocol: "https",
-        hostname: "ext.same-assets.com",
-        pathname: "/**",
-      },
-      {
-        protocol: "https",
-        hostname: "ugc.same-assets.com",
-        pathname: "/**",
-      },
+      { protocol: 'https', hostname: 'res.cloudinary.com', pathname: '/**' },
+      { protocol: 'https', hostname: 'ext.same-assets.com', pathname: '/**' },
+      { protocol: 'https', hostname: 'ugc.same-assets.com', pathname: '/**' },
+      { protocol: 'https', hostname: 'source.unsplash.com', pathname: '/**' },
+      { cooking: 'https', hostname: 'images.unsplash.com', pathname: '/**' },
     ],
   },
   webpack(config) {
     config.optimization.splitChunks = {
       chunks: 'all',
-      maxSize: 2000000,
-      minSize: 500000,
+      maxSize: 1000000, // 1MB (reduced from 2MB for smaller chunks)
+      minSize: 200000, // 200KB
       cacheGroups: {
         vendors: {
           test: /[\\/]node_modules[\\/]/,
@@ -58,10 +40,10 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: "/api/:path*",
+        source: '/api/:path*',
         headers: [
-          { key: "Cache-Control", value: "no-store, max-age=0" },
-          { key: "Pragma", value: "no-cache" },
+          { key: 'Cache-Control', value: 'no-store, max-age=0' },
+          { key: 'Pragma', value: 'no-cache' },
         ],
       },
     ];
@@ -71,9 +53,9 @@ const nextConfig = {
       beforeFiles: [],
       afterFiles: [
         {
-          source: "/api/:path*",
-          destination: "/api/:path*",
-          has: [{ type: "header", key: "x-prerender", value: undefined }],
+          source: '/api/:path*',
+          destination: '/api/:path*',
+          has: [{ type: 'header', key: 'x-prerender', value: undefined }],
         },
       ],
       fallback: [],
@@ -81,4 +63,4 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+module.exports = withBundleAnalyzer(nextConfig);
