@@ -3,6 +3,30 @@ import User from "@models/User";
 import { connectToDatabase } from "@lib/mongodb";
 import { cookies } from "next/headers";
 
+interface OrderItem {
+  productId: number;
+  quantity: number;
+  name: string;
+  price: number;
+}
+
+// Define the success response structure
+interface SuccessOrderResponse {
+  order: {
+    total: number;
+    userId: string;
+    items: OrderItem[];
+  };
+}
+
+// Define the error response structure
+interface ErrorResponse {
+  error: string;
+}
+
+// Union type for the fetch response
+type OrderResponse = SuccessOrderResponse | ErrorResponse;
+
 export async function GET(request: Request, { params }: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await params;
 
@@ -31,7 +55,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ orde
 
     const contentType = orderResponse.headers.get("content-type") || "";
     const responseBody = await orderResponse.text();
-    let orderData;
+    let orderData: OrderResponse;
 
     if (contentType.includes("application/json")) {
       try {
@@ -47,10 +71,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ orde
 
     if (!orderResponse.ok) {
       console.error(`Order fetch failed: ${orderResponse.status} ${orderResponse.statusText}`, orderData);
-      return NextResponse.json({ error: orderData.error || "Order not found" }, { status: orderResponse.status });
+      // Since orderResponse.ok is false, orderData should be an ErrorResponse
+      const errorMessage = "error" in orderData ? orderData.error : "Order not found";
+      return NextResponse.json({ error: errorMessage }, { status: orderResponse.status });
     }
 
-    const { total, userId, items } = orderData.order;
+    // At this point, orderData should be a SuccessOrderResponse
+    const successData = orderData as SuccessOrderResponse;
+    const { total, userId, items } = successData.order;
 
     // Fetch customer details from User model
     const user = await User.findById(userId).select("name email");
@@ -76,7 +104,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ orde
       referenceId: orderId,
       currency: "BRL",
       description: `Payment for order #${orderId}`,
-      items: items.map((item: any) => ({
+      items: items.map((item: OrderItem) => ({
         name: item.name,
         title: item.name,
         quantity: item.quantity,
@@ -116,16 +144,17 @@ export async function GET(request: Request, { params }: { params: Promise<{ orde
     }
 
     return NextResponse.json({
-      pixCode: pixData.pix?.qrcode, // Map the correct field
+      pixCode: pixData.pix?.qrcode,
       amount: total,
-      // Remove qrCodeUrl since PayOnHub doesn't provide it
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorStack = error instanceof Error ? error.stack : undefined;
     console.error("Error creating PIX transaction:", {
-      message: error.message,
-      stack: error.stack,
+      message: errorMessage,
+      stack: errorStack,
       orderId,
     });
-    return NextResponse.json({ error: "Internal server error", details: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error", details: errorMessage }, { status: 500 });
   }
 }

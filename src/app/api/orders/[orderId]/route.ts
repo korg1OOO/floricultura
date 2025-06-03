@@ -60,12 +60,14 @@ export async function GET(request: Request, context: { params: Promise<{ orderId
       },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorStack = error instanceof Error ? error.stack : undefined;
     console.error("Error fetching order:", {
-      message: error.message,
-      stack: error.stack,
+      message: errorMessage,
+      stack: errorStack,
     });
-    return NextResponse.json({ error: "Failed to fetch order", details: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch order", details: errorMessage }, { status: 500 });
   }
 }
 
@@ -89,7 +91,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ order
     const orderId = params.orderId;
 
     const body = await request.json();
-    const { status } = body; // Removed pixKey
+    const { status } = body;
 
     if (status && !["pending", "completed", "cancelled"].includes(status)) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
@@ -116,11 +118,13 @@ export async function PATCH(request: Request, context: { params: Promise<{ order
       { message: "Order updated", order: { ...order.toObject(), _id: order._id.toString() } },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorStack = error instanceof Error ? error.stack : undefined;
     console.error("Error updating order:", {
-      message: error.message,
-      stack: error.stack,
+      message: errorMessage,
+      stack: errorStack,
     });
-    return NextResponse.json({ error: "Failed to update order", details: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Failed to update order", details: errorMessage }, { status: 500 });
   }
 }

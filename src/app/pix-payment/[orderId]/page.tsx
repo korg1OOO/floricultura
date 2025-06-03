@@ -6,7 +6,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import WhatsAppFloat from "@/components/WhatsAppFloat";
 import { toast } from "react-hot-toast";
-import { QRCodeCanvas } from "qrcode.react"; // Use named export QRCodeCanvas
+import { QRCodeCanvas } from "qrcode.react";
 
 interface PixData {
   pixCode: string;
@@ -58,10 +58,11 @@ export default function PixPayment({ params }: PixPaymentPageProps) {
         setError(data.details || data.error || "Erro ao carregar os dados do PIX.");
         toast.error(data.details || data.error || "Erro ao carregar os dados do PIX.");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
       console.error("Error fetching PIX data:", error);
-      setError(error.message || "Erro ao carregar os dados do PIX.");
-      toast.error(error.message || "Erro ao carregar os dados do PIX.");
+      setError(errorMessage || "Erro ao carregar os dados do PIX.");
+      toast.error(errorMessage || "Erro ao carregar os dados do PIX.");
     } finally {
       setLoading(false);
     }
@@ -71,7 +72,7 @@ export default function PixPayment({ params }: PixPaymentPageProps) {
     if (resolvedParams?.orderId) {
       fetchPixData();
     }
-  }, [resolvedParams]);
+  }, [resolvedParams, fetchPixData]); // Added fetchPixData to dependencies
 
   const handleCopyPixCode = () => {
     if (pixData?.pixCode) {
