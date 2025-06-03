@@ -44,10 +44,10 @@ export async function POST(request: Request) {
     );
     response.cookies.set("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: process.env.NODE_ENV === "production", // False locally, true on Vercel
       maxAge: 24 * 60 * 60 * 1000, // 1 day
       path: "/",
-      sameSite: "lax", // Explicitly set for clarity
+      sameSite: "lax",
     });
     return response;
   } catch (error) {

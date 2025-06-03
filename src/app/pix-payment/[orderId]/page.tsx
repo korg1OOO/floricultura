@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -27,6 +27,8 @@ export default function PixPayment({ params }: PixPaymentPageProps) {
   const [loading, setLoading] = useState(true);
   const [resolvedParams, setResolvedParams] = useState<PixParams | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0); // Track retry attempts
+  const maxRetries = 3; // Maximum retry attempts
 
   useEffect(() => {
     const resolveParams = async () => {
@@ -36,7 +38,7 @@ export default function PixPayment({ params }: PixPaymentPageProps) {
     resolveParams();
   }, [params]);
 
-  const fetchPixData = async () => {
+  const fetchPixData = useCallback(async () => {
     if (!resolvedParams?.orderId) return;
 
     try {
@@ -49,6 +51,7 @@ export default function PixPayment({ params }: PixPaymentPageProps) {
         console.log("Fetched PIX data:", data);
         setPixData({ pixCode: data.pixCode, amount: data.amount });
         setError(null);
+        setRetryCount(0); // Reset retry count on success
       } else {
         if (response.status === 401) {
           toast.error("Você precisa estar logado para acessar esta página.");
@@ -66,13 +69,13 @@ export default function PixPayment({ params }: PixPaymentPageProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [resolvedParams?.orderId, router]);
 
   useEffect(() => {
     if (resolvedParams?.orderId) {
       fetchPixData();
     }
-  }, [resolvedParams, fetchPixData]); // Added fetchPixData to dependencies
+  }, [resolvedParams, fetchPixData]);
 
   const handleCopyPixCode = () => {
     if (pixData?.pixCode) {
@@ -87,7 +90,14 @@ export default function PixPayment({ params }: PixPaymentPageProps) {
     router.push("/checkout?fromPayment=true");
   };
 
-  const handleRetry = () => {
+  const handleRetry = async () => {
+    if (retryCount >= maxRetries) {
+      toast.error("Número máximo de tentativas atingido. Por favor, tente novamente mais tarde.");
+      return;
+    }
+    setRetryCount(retryCount + 1);
+    setLoading(true);
+    await new Promise((resolve) => setTimeout(resolve, 2000)); // 2-second delay
     fetchPixData();
   };
 
@@ -126,9 +136,14 @@ export default function PixPayment({ params }: PixPaymentPageProps) {
                 <button
                   type="button"
                   onClick={handleRetry}
-                  className="w-1/3 bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition-colors"
+                  disabled={loading || retryCount >= maxRetries}
+                  className={`w-1/3 p-3 rounded-lg transition-colors ${
+                    loading || retryCount >= maxRetries
+                      ? "bg-blue-400 text-white cursor-not-allowed"
+                      : "bg-blue-600 text-white hover:bg-blue-700"
+                  }`}
                 >
-                  Tentar Novamente
+                  {loading ? "Carregando..." : "Tentar Novamente"}
                 </button>
                 <button
                   type="button"

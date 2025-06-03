@@ -10,7 +10,6 @@ interface OrderItem {
   price: number;
 }
 
-// Define the success response structure
 interface SuccessOrderResponse {
   order: {
     total: number;
@@ -19,12 +18,10 @@ interface SuccessOrderResponse {
   };
 }
 
-// Define the error response structure
 interface ErrorResponse {
   error: string;
 }
 
-// Union type for the fetch response
 type OrderResponse = SuccessOrderResponse | ErrorResponse;
 
 export async function GET(request: Request, { params }: { params: Promise<{ orderId: string }> }) {
@@ -32,12 +29,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ orde
 
   try {
     await connectToDatabase();
-
-    // Fetch order details
-    let baseUrl = process.env.NEXT_PUBLIC_VERCEL_URL || "localhost:3001";
-    baseUrl = baseUrl.replace(/^https?:\/\//, "");
-    const fullUrl = `http://${baseUrl}/api/orders/${orderId}`;
-    console.log(`Fetching order from: ${fullUrl}`);
 
     // Get token from cookies
     const cookieStore = await cookies();
@@ -47,9 +38,16 @@ export async function GET(request: Request, { params }: { params: Promise<{ orde
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
+    // Construct absolute URL for fetch
+    const host = request.headers.get("host") || "localhost:3000";
+    const isLocalhost = host.includes("localhost");
+    const protocol = process.env.NODE_ENV === "production" && !isLocalhost ? "https" : "http";
+    const fullUrl = `${protocol}://${host}/api/orders/${orderId}`;
+    console.log(`Fetching order from: ${fullUrl}`);
+
     const orderResponse = await fetch(fullUrl, {
       headers: {
-        Cookie: `token=${token}`,
+        Cookie: `token=${token}`, // Forward the token explicitly
       },
     });
 
@@ -71,12 +69,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ orde
 
     if (!orderResponse.ok) {
       console.error(`Order fetch failed: ${orderResponse.status} ${orderResponse.statusText}`, orderData);
-      // Since orderResponse.ok is false, orderData should be an ErrorResponse
       const errorMessage = "error" in orderData ? orderData.error : "Order not found";
       return NextResponse.json({ error: errorMessage }, { status: orderResponse.status });
     }
 
-    // At this point, orderData should be a SuccessOrderResponse
     const successData = orderData as SuccessOrderResponse;
     const { total, userId, items } = successData.order;
 
@@ -86,6 +82,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ orde
       console.error(`User not found for userId: ${userId}`);
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
+
+    // Use the same host and protocol for PayOnHub postbackUrl
+    const postbackBaseUrl = `${protocol}://${host}`;
 
     // PayOnHub API request
     const url = "https://api.payonhub.com/v1/transactions";
@@ -119,7 +118,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ orde
       pix: {
         expiration: 3600,
       },
-      postbackUrl: `http://${baseUrl}/api/webhooks/payonhub`,
+      postbackUrl: `${postbackBaseUrl}/api/webhooks/payonhub`,
       externalRef: orderId,
       ip: request.headers.get("x-forwarded-for") || "unknown",
     };
